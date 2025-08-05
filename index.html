@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Motorola Model Decoder</title>
+  <style>
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #091c2e;
+  color: #222;
+  margin: 0;
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+}
+
+.container {
+  background: rgb(230, 230, 230);
+  padding: 2rem 3rem;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  max-width: 480px;
+  width: 100%;
+}
+
+h1 {
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 0.25rem;
+  text-align: center;
+}
+
+p {
+  font-size: 0.9rem;
+  color: #555;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  line-height: 1.4;
+}
+
+input[type="text"] {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  font-size: 1rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  transition: border-color 0.3s ease;
+  box-sizing: border-box;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: #0078d7;
+  box-shadow: 0 0 8px rgba(0, 120, 215, 0.3);
+}
+
+button {
+  margin-top: 1rem;
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: white;
+  background-color: #0078d7;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #005ea1;
+}
+
+#result {
+  margin-top: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  background-color: #eef3f7;
+  border-left: 5px solid #0078d7;
+  border-radius: 8px;
+  font-size: 1rem;
+  color: #333;
+  min-height: 6rem;
+  white-space: pre-line;
+}
+
+#result span[style*="color: red"] {
+  font-weight: 700;
+}
+
+code {
+  background-color: #f2f4f6;
+  padding: 0.15em 0.5em;
+  border-radius: 4px;
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: 600;
+  color: #0078d7;
+}
+
+  </style>
+</head>
+<body>
+    <div class="container">
+
+  <h1>Motorola Model Decoder</h1>
+  <p>Enter a <code>Model Number</code> (e.g. <code>AAA00AAA0AA0AA</code>) to decode band, power, form factor, model, and revision.</p>
+
+  <input type="text" id="lookupInput" placeholder="Enter Model Number" />
+  <button onclick="decodeModel()">Decode</button>
+
+  <div id="result"></div>
+
+  <script>
+    function decodeModel() {
+      const input = document.getElementById("lookupInput").value.trim().toUpperCase();
+      const resultDiv = document.getElementById("result");
+
+      if (!/^AAM\d{2}[A-Z0-9]{9,}$/.test(input)) {
+        resultDiv.innerHTML = `<span style="color: red;">Invalid model format. Expected format: AAMxx...</span>`;
+        return;
+      }
+
+      const typeCode = input[3];
+      const powerDigit = input[4];
+      const bandCode = input[5];
+      const powerCode = input[6];
+      const modelCode = input.slice(7, 10); // 3-letter product series
+      const revisionCode = input.slice(-2);
+
+      const typeTable = {
+        "H": "Handheld",
+        "D": "Dash-mount Mobile",
+        "T": "Trunk-mount",
+        "P": "Packset Portable",
+        "B": "Base Station Rack",
+        "C": "Compact Base",
+        "L": "Table-top Base",
+        "J": "Weatherproof Base",
+        "U": "Universal Mount",
+        "M": "Motorcycle",
+        "R": "Railroad",
+        "Q": "Custom/Special",
+        "X": "Custom/Special",
+        "Z": "Custom/Special"
+      };
+
+      const legacyBandDigit = {
+        "3": "VHF (136–174 MHz)",
+        "4": "UHF (403–470 MHz)",
+        "5": "800 MHz",
+        "6": "174–225 MHz",
+        "7": "900 MHz"
+      };
+
+      const bandTable = {
+        "K": "VHF High (136–174 MHz)",
+        "Q": "UHF1 (403–470 MHz)",
+        "S": "UHF2 (450–520 MHz)",
+        "U": "700/800 MHz",
+        "W": "900 MHz"
+      };
+
+      const powerTable = {
+        "0": "Low Power (~1–5W)",
+        "1": "5–10W",
+        "2": "10–15W",
+        "3": "~25W",
+        "5": "~25–30W",
+        "9": "High Power (30–50W)",
+        "P": "50W (High Power)",
+        "N": "25–35W (Medium Power)",
+        "M": "Low Power"
+      };
+
+      const modelSeriesTable = {
+        "PH9": "XPR 5550",
+        "DC9": "CP200",
+        "PH5": "XPR 4550",
+        "JJA": "MaxTrac",
+        "GSB": "Spectra Base",
+        "JNC": "APX 6000",
+        "JNR": "APX 8000",
+        "QPH": "XPR 4550 (Alt.)"
+      };
+
+      const type = typeTable[typeCode] || "Unknown";
+      const legacyBand = legacyBandDigit[powerDigit] || "Unknown or superseded";
+      const band = bandTable[bandCode] || legacyBand;
+      const power = powerTable[powerCode] || "Unknown";
+      const modelName = modelSeriesTable[modelCode] || `Unknown model series (${modelCode})`;
+
+      resultDiv.innerHTML = `
+        <strong>Model:</strong> ${input}<br>
+        <strong>Radio Type:</strong> ${modelName}<br>
+        <strong>Form Factor:</strong> ${type} (Code: ${typeCode})<br>
+        <strong>Frequency Band:</strong> ${band} (Band Code: ${bandCode}, Legacy Code: ${powerDigit})<br>
+        <strong>Power:</strong> ${power} (Code: ${powerCode})<br>
+        <strong>Revision:</strong> ${revisionCode}<br>
+        <em>Note: This is a partial decode based on commonly used Motorola model number formats.</em>
+      `;
+    }
+  </script>
+    </div>
+</body>
+</html>
