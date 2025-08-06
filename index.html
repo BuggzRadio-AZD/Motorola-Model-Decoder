@@ -3,8 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Motorola Model Decoder</title>
+  <title>Motorola Model Decoder | Decode Motorola Radio Model Numbers</title>
+  <meta name="description" content="Decode Motorola radio model numbers including Waris, DMR, MOTOTRBO, APX, and Astro series. Get detailed info on band, power, protocol, and more." />
+  <meta name="keywords" content="Motorola, Radio, Model Decoder, DMR, MOTOTRBO, APX, Astro, Waris, Radio Models, Radio Decoder" />
+  <meta name="author" content="Henry Bartz" />
   <style>
+    /* Reset & base */
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background-color: #091c2e;
@@ -15,85 +22,126 @@
       justify-content: center;
       align-items: flex-start;
       min-height: 100vh;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
     .container {
-      background: rgb(230, 230, 230);
+      background: #e6e6e6;
       padding: 2rem 3rem;
       border-radius: 12px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-      max-width: 600px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      max-width: 650px;
       width: 100%;
+      color: #1a1a1a;
     }
     h1 {
       font-weight: 700;
-      color: #1a1a1a;
       margin-bottom: 0.25rem;
       text-align: center;
+      font-size: 2rem;
+      color: #0078d7;
+      text-shadow: 0 0 5px rgba(0,120,215,0.5);
     }
     p {
-      font-size: 0.9rem;
+      font-size: 1rem;
       color: #555;
       text-align: center;
-      margin-bottom: 1.5rem;
-      line-height: 1.4;
+      margin-bottom: 2rem;
+      line-height: 1.5;
+      user-select: none;
     }
     input[type="text"] {
       width: 100%;
-      padding: 0.7rem 1rem;
-      font-size: 1rem;
-      border: 2px solid #ddd;
-      border-radius: 8px;
-      transition: border-color 0.3s ease;
+      padding: 0.75rem 1.1rem;
+      font-size: 1.1rem;
+      border: 2px solid #bbb;
+      border-radius: 10px;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
       box-sizing: border-box;
+      letter-spacing: 0.05em;
     }
     input[type="text"]:focus {
       outline: none;
       border-color: #0078d7;
-      box-shadow: 0 0 8px rgba(0, 120, 215, 0.3);
+      box-shadow: 0 0 10px rgba(0, 120, 215, 0.4);
+      background-color: #fff;
     }
     button {
-      margin-top: 1rem;
+      margin-top: 1.2rem;
       width: 100%;
-      padding: 0.75rem;
-      font-size: 1.1rem;
-      font-weight: 600;
+      padding: 0.85rem;
+      font-size: 1.2rem;
+      font-weight: 700;
       color: white;
       background-color: #0078d7;
       border: none;
-      border-radius: 8px;
+      border-radius: 10px;
       cursor: pointer;
-      transition: background-color 0.3s ease;
+      transition: background-color 0.3s ease, box-shadow 0.3s ease;
+      user-select: none;
     }
-    button:hover {
+    button:hover, button:focus {
       background-color: #005ea1;
+      box-shadow: 0 0 12px rgba(0,94,161,0.7);
     }
     #result {
-      margin-top: 1.5rem;
-      padding: 1.25rem 1.5rem;
+      margin-top: 2rem;
+      padding: 1.5rem 2rem;
       background-color: #eef3f7;
-      border-left: 5px solid #0078d7;
-      border-radius: 8px;
+      border-left: 6px solid #0078d7;
+      border-radius: 10px;
       font-size: 1rem;
-      color: #333;
+      color: #222;
       white-space: pre-line;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+      min-height: 8rem;
+      line-height: 1.4;
+      font-family: 'Courier New', Courier, monospace;
+      user-select: text;
+    }
+    strong {
+      color: #005ea1;
+    }
+    em {
+      display: block;
+      margin-top: 1rem;
+      font-style: italic;
+      color: #555;
+      font-size: 0.9rem;
+      user-select: none;
     }
     code {
       background-color: #f2f4f6;
-      padding: 0.15em 0.5em;
-      border-radius: 4px;
+      padding: 0.2em 0.6em;
+      border-radius: 5px;
       font-family: 'Courier New', Courier, monospace;
       font-weight: 600;
       color: #0078d7;
+      user-select: text;
+    }
+    /* Responsive */
+    @media (max-width: 480px) {
+      .container {
+        padding: 1.5rem 1.5rem;
+      }
+      h1 {
+        font-size: 1.5rem;
+      }
+      button {
+        font-size: 1rem;
+        padding: 0.65rem;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="container" role="main" aria-label="Motorola Model Decoder Tool">
     <h1>Motorola Model Decoder</h1>
     <p>Enter a Motorola <code>Model Number</code> (e.g. <code>AAM27JQN9LA1AN</code> or <code>H98UCH9PW7AN</code>) to decode.</p>
-    <input type="text" id="lookupInput" placeholder="Enter Model Number"/>
-    <button onclick="decodeModel()">Decode</button>
-    <div id="result"></div>
+    <input type="text" id="lookupInput" placeholder="Enter Model Number" aria-label="Model Number input" autocomplete="off" />
+    <button onclick="decodeModel()" aria-label="Decode Motorola model number">Decode</button>
+    <div id="result" aria-live="polite" aria-atomic="true"></div>
   </div>
 
   <script>
@@ -101,6 +149,7 @@
       const input = document.getElementById("lookupInput").value.trim().toUpperCase();
       const resultDiv = document.getElementById("result");
 
+      // Basic validation
       if (!/^[A-Z0-9]{12,15}$/.test(input)) {
         resultDiv.innerHTML = `<span style="color: red;">Invalid model format. Expected 12–15 alphanumeric characters.</span>`;
         return;
@@ -151,11 +200,12 @@
       };
 
       const modelId = input.slice(3, 6);
-      const family = modelSeriesTable[modelId] ? modelSeriesTable[modelId] : "Unknown Family";
-
       let output = `<strong>Model:</strong> ${input}`;
+
       if (modelSeriesTable[modelId]) {
         output += `\n<strong>Detected Series:</strong> ${modelSeriesTable[modelId]}`;
+      } else {
+        output += `\n<strong>Detected Series:</strong> Unknown Family (${modelId})`;
       }
 
       if (["AAM", "AAH"].includes(prefix)) {
