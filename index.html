@@ -8,24 +8,25 @@
   <meta name="keywords" content="Motorola, Radio, Model Decoder, DMR, MOTOTRBO, APX, Astro, Waris, Radio Models, Radio Decoder" />
   <meta name="author" content="Henry Bartz" />
   <style>
-    /* Reset & base */
     *, *::before, *::after {
       box-sizing: border-box;
     }
-body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #091c2e;
-  color: #222;
-  margin: 0;
-  padding: 2rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: 100vh;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #091c2e;
+      color: #222;
+      margin: 0;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+    .dark {
+      background-color: #0c1a2a;
+      color: #eee;
+    }
     .container {
       background: #e6e6e6;
       padding: 2rem 3rem;
@@ -34,6 +35,10 @@ body {
       max-width: 650px;
       width: 100%;
       color: #1a1a1a;
+    }
+    .dark .container {
+      background: #1e2b3c;
+      color: #eee;
     }
     h1 {
       font-weight: 700;
@@ -57,8 +62,6 @@ body {
       font-size: 1.1rem;
       border: 2px solid #bbb;
       border-radius: 10px;
-      transition: border-color 0.3s ease, box-shadow 0.3s ease;
-      box-sizing: border-box;
       letter-spacing: 0.05em;
     }
     input[type="text"]:focus {
@@ -78,8 +81,6 @@ body {
       border: none;
       border-radius: 10px;
       cursor: pointer;
-      transition: background-color 0.3s ease, box-shadow 0.3s ease;
-      user-select: none;
     }
     button:hover, button:focus {
       background-color: #005ea1;
@@ -96,9 +97,11 @@ body {
       white-space: pre-line;
       box-shadow: 0 3px 10px rgba(0,0,0,0.05);
       min-height: 8rem;
-      line-height: 1.4;
       font-family: 'Courier New', Courier, monospace;
-      user-select: text;
+    }
+    .dark #result {
+      background-color: #2f3e50;
+      color: #eee;
     }
     strong {
       color: #005ea1;
@@ -118,12 +121,10 @@ body {
       font-family: 'Courier New', Courier, monospace;
       font-weight: 600;
       color: #0078d7;
-      user-select: text;
     }
-    /* Responsive */
     @media (max-width: 480px) {
       .container {
-        padding: 1.5rem 1.5rem;
+        padding: 1.5rem;
       }
       h1 {
         font-size: 1.5rem;
@@ -141,64 +142,69 @@ body {
     <p>Enter a Motorola <code>Model Number</code> (e.g. <code>AAM27JQN9LA1AN</code> or <code>H98UCH9PW7AN</code>) to decode.</p>
     <input type="text" id="lookupInput" placeholder="Enter Model Number" aria-label="Model Number input" autocomplete="off" />
     <button onclick="decodeModel()" aria-label="Decode Motorola model number">Decode</button>
+    <button onclick="copyResult()">Copy Result</button>
+    <button onclick="exportResult()">Download as TXT</button>
+    <label style="margin-top:1rem; display:block;">
+      <input type="checkbox" id="darkModeToggle" /> Dark Mode
+    </label>
     <div id="result" aria-live="polite" aria-atomic="true"></div>
+    <div id="history" style="margin-top: 1rem;"></div>
+    <canvas id="qrCodeCanvas" style="margin-top:1rem;"></canvas>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
   <script>
+    const inputField = document.getElementById("lookupInput");
+    inputField.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") decodeModel();
+    });
+
+    document.getElementById("darkModeToggle").addEventListener("change", function () {
+      document.body.classList.toggle("dark");
+    });
+
+    function copyResult() {
+      const text = document.getElementById("result").innerText;
+      navigator.clipboard.writeText(text).then(() => alert("Copied to clipboard"));
+    }
+
+    function exportResult() {
+      const content = document.getElementById("result").innerText;
+      const blob = new Blob([content], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "decoded_model.txt";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
     function decodeModel() {
-      const input = document.getElementById("lookupInput").value.trim().toUpperCase();
+      const input = inputField.value.trim().toUpperCase();
       const resultDiv = document.getElementById("result");
 
-      // Basic validation
       if (!/^[A-Z0-9]{12,15}$/.test(input)) {
-        resultDiv.innerHTML = `<span style="color: red;">Invalid model format. Expected 12–15 alphanumeric characters.</span>`;
+        resultDiv.innerHTML = `
+          <strong style="color:red;">Error:</strong> Invalid model format.<br>
+          <em>Expected 12–15 alphanumeric characters, all uppercase.</em>`;
         return;
       }
 
-      const prefix = input.slice(0, 3);
-      const typeMap = {
-        "H": "Handheld Portable",
-        "M": "Mobile"
-      };
-      const bandMap = {
-        "K": "136–174 MHz", "R": "403–470 MHz", "S": "450–512 MHz",
-        "U": "700/800 MHz", "W": "900 MHz", "Q": "380–470 MHz", "V": "825–870 MHz",
-        "B": "29.7–36 MHz", "C": "36–42 MHz", "D": "42–50 MHz"
-      };
-      const powerMap = {
-        "C": "3 W", "D": "4–5 W", "E": "6 W", "H": "1–25 W", "K": "25–45 W",
-        "A": "0–0.7 W", "B": "0.7–0.9 W", "F": "6.1–10 W"
-      };
-      const pkgMap = {
-        "C": "No Display (NOT CONFIDENT)", "D": "4-line Display (NOT CONFIDENT)", "E": "6-line Display (NOT CONFIDENT)", "F": "Unknown",
-        "N": "Enhanced Control Head (NOT CONFIDENT)", "L": "Limited Keypad", "P": "Full Keypad", "H": "Display & Keypad"
-      };
-      const spacingMap = {
-        "1": "5 kHz", "2": "6.25 kHz", "4": "12.5 kHz", "6": "25 kHz", "9": "Variable/Programmable"
-      };
-      const protocolMap = {
-        "AA": "Conventional", "CK": "MPT1327", "PW": "P25 Digital", "PH": "Analog/Conv", "PM": "Mixed Mode",
-        "N9": "DMR Tier II", "N5": "DMR Tier III"
-      };
-      const featureMap = {
-        "1": "4 Channels", "2": "16 Channels", "5": "128 Channels", "6": "Multi-System"
-      };
-      const packageMap = {
-        "N": "Standard", "C": "CENELEC", "E": "Export", "U": "US Market"
-      };
+      const typeMap = { "H": "Handheld Portable", "M": "Mobile" };
+      const bandMap = { "K": "136–174 MHz", "R": "403–470 MHz", "S": "450–512 MHz", "U": "700/800 MHz", "W": "900 MHz", "Q": "380–470 MHz", "V": "825–870 MHz", "B": "29.7–36 MHz", "C": "36–42 MHz", "D": "42–50 MHz" };
+      const powerMap = { "C": "3 W", "D": "4–5 W", "E": "6 W", "H": "1–25 W", "K": "25–45 W", "A": "0–0.7 W", "B": "0.7–0.9 W", "F": "6.1–10 W" };
+      const pkgMap = { "C": "No Display", "D": "4-line Display", "E": "6-line Display", "F": "Unknown", "N": "Enhanced Control Head", "L": "Limited Keypad", "P": "Full Keypad", "H": "Display & Keypad" };
+      const spacingMap = { "1": "5 kHz", "2": "6.25 kHz", "4": "12.5 kHz", "6": "25 kHz", "9": "Variable/Programmable" };
+      const protocolMap = { "AA": "Conventional", "CK": "MPT1327", "PW": "P25 Digital", "PH": "Analog/Conv", "PM": "Mixed Mode", "N9": "DMR Tier II", "N5": "DMR Tier III" };
+      const featureMap = { "1": "4 Channels", "2": "16 Channels", "5": "128 Channels", "6": "Multi-System" };
+      const packageMap = { "N": "Standard", "C": "CENELEC", "E": "Export", "U": "US Market" };
       const modelSeriesTable = {
-        "PH9": "XPR 5550",
-        "DC9": "CP200",
-        "PH5": "XPR 4550",
-        "JNC": "APX 6000",
-        "JNR": "APX 8000",
-        "QPH": "XPR 4550 Alt",
-        "UCH": "APX 4000",
-        "JQN": "XPR 7350",
-        "JQH": "XPR 3500",
-        "JQG": "XPR 3300"
+        "PH9": "XPR 5550", "DC9": "CP200", "PH5": "XPR 4550", "JNC": "APX 6000",
+        "JNR": "APX 8000", "QPH": "XPR 4550 Alt", "UCH": "APX 4000",
+        "JQN": "XPR 7350", "JQH": "XPR 3500", "JQG": "XPR 3300"
       };
 
+      const prefix = input.slice(0, 3);
       const modelId = input.slice(3, 6);
       let output = `<strong>Model:</strong> ${input}`;
 
@@ -267,10 +273,24 @@ body {
       }
 
       resultDiv.innerHTML = `<div style="white-space: pre-line;">${output}</div>`;
+
+      const history = JSON.parse(localStorage.getItem("modelHistory") || "[]");
+      history.unshift(input);
+      localStorage.setItem("modelHistory", JSON.stringify([...new Set(history)].slice(0, 5)));
+
+      document.getElementById("history").innerHTML =
+        `<em>Recent Lookups:</em> ` +
+        [...new Set(history)].slice(0, 5).map(h => `<code>${h}</code>`).join(", ");
+
+      new QRious({
+        element: document.getElementById('qrCodeCanvas'),
+        value: `https://github.com/BuggzRadio-AZD/Motorola-Model-Decoder?model=${input}`,
+        size: 150
+      });
     }
   </script>
 
-    <footer style="margin-top: 3rem; text-align: center; font-size: 0.9rem; color: #888;">
+  <footer style="margin-top: 3rem; text-align: center; font-size: 0.9rem; color: #888;">
     <hr style="border: none; border-top: 1px solid #ccc;">
     <p>Made by <strong>Buggz</strong> <a style="color: #555" href="https://github.com/BuggzRadio-AZD/Motorola-Model-Decoder">Github Repo</a></p>
     <div style="margin-top: 0.5rem;">
